@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UX优先级评估 · 日本酒店搜索路径</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F5F3EE;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --border: #E2DDD6;
+    --border-strong: #C8C3BA;
+    --text: #1A1916;
+    --text-2: #6B6760;
+    --text-3: #9E9A94;
+    --accent: #1A1916;
+    --p0-bg: #FFF0EE; --p0-text: #8B2A1A; --p0-border: #F5B8B0;
+    --p1-bg: #FFF8EE; --p1-text: #7A4A0A; --p1-border: #F5D8A0;
+    --p2-bg: #EDFAF3; --p2-text: #0F5C35; --p2-border: #A8E8C8;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 40px;
+  }
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+  .header p {
+    font-size: 14px;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+  .path-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .path-step {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    color: var(--text-2);
+  }
+  .path-arrow { color: var(--text-3); font-size: 12px; }
+
+  /* Score summary bar */
+  .score-summary {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .score-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    flex: 1;
+    min-width: 140px;
+  }
+  .score-pill-label { font-size: 11px; color: var(--text-3); }
+  .score-pill-val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+    margin-left: auto;
+  }
+  .score-pill-val.empty { color: var(--text-3); }
+
+  /* Dimension card */
+  .dim-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .dim-card:focus-within {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .dim-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .dim-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    margin-bottom: 4px;
+  }
+  .dim-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .dim-max {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-3);
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+  .dim-current {
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: right;
+    line-height: 1;
+  }
+  .dim-current.empty { color: var(--border-strong); }
+
+  /* Options */
+  .options-list { padding: 8px 12px 12px; }
+  .opt-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 2px;
+  }
+  .opt-label:hover { background: var(--bg); }
+  .opt-label.selected { background: var(--surface2); }
+  .opt-label input { display: none; }
+  .opt-radio {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--border-strong);
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .opt-label.selected .opt-radio {
+    border-color: var(--text);
+    background: var(--text);
+  }
+  .opt-radio-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .opt-label.selected .opt-radio-dot { opacity: 1; }
+  .opt-score {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-3);
+    min-width: 20px;
+    padding-top: 2px;
+    flex-shrink: 0;
+  }
+  .opt-label.selected .opt-score { color: var(--text); }
+  .opt-content { flex: 1; }
+  .opt-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 2px;
+    line-height: 1.4;
+  }
+  .opt-desc {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.6;
+  }
+
+  /* Result */
+  .result-wrap {
+    margin-top: 8px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .result-wrap.visible {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+  .result-card {
+    border-radius: 12px;
+    padding: 24px;
+    border: 1.5px solid var(--border);
+  }
+  .result-card.p0 { background: var(--p0-bg); border-color: var(--p0-border); }
+  .result-card.p1 { background: var(--p1-bg); border-color: var(--p1-border); }
+  .result-card.p2 { background: var(--p2-bg); border-color: var(--p2-border); }
+
+  .result-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  .result-priority {
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .result-card.p0 .result-priority { color: var(--p0-text); }
+  .result-card.p1 .result-priority { color: var(--p1-text); }
+  .result-card.p2 .result-priority { color: var(--p2-text); }
+  .result-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .result-card.p0 .result-name { color: var(--p0-text); }
+  .result-card.p1 .result-name { color: var(--p1-text); }
+  .result-card.p2 .result-name { color: var(--p2-text); }
+  .result-total {
+    font-family: var(--mono);
+    font-size: 36px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .result-total-max { font-size: 16px; color: var(--text-3); }
+  .result-card.p0 .result-total { color: var(--p0-text); }
+  .result-card.p1 .result-total { color: var(--p1-text); }
+  .result-card.p2 .result-total { color: var(--p2-text); }
+
+  .score-breakdown {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .breakdown-item {
+    flex: 1;
+    min-width: 100px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .breakdown-label { font-size: 11px; color: var(--text-2); margin-bottom: 4px; }
+  .breakdown-val {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .result-card.p0 .breakdown-val { color: var(--p0-text); }
+  .result-card.p1 .breakdown-val { color: var(--p1-text); }
+  .result-card.p2 .breakdown-val { color: var(--p2-text); }
+
+  .bar-track {
+    height: 4px;
+    background: rgba(0,0,0,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+  .result-card.p0 .bar-fill { background: var(--p0-text); }
+  .result-card.p1 .bar-fill { background: var(--p1-text); }
+  .result-card.p2 .bar-fill { background: var(--p2-text); }
+
+  .result-tip {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+  }
+  .result-tip strong { font-weight: 700; }
+
+  /* Reset btn */
+  .reset-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  .reset-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text-2);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .reset-btn:hover { background: var(--surface); color: var(--text); }
+
+  /* Footer */
+  .footer {
+    margin-top: 48px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="header-tag">UX Issue Priority Framework · JP Hotel Search</div>
+    <h1>优先级评估工具</h1>
+    <p>针对日本酒店搜索路径的 UX 问题，通过三个维度打分来判断修复优先级。</p>
+    <div class="path-flow">
+      <span class="path-step">搜索</span>
+      <span class="path-arrow">→</span>
+      <span class="path-step">酒店信息页</span>
+      <span class="path-arrow">→</span>
+      <span class="path-step">跳转 OTA</span>
+    </div>
+  </div>
+
+  <!-- Score summary pills -->
+  <div class="score-summary">
+    <div class="score-pill">
+      <div>
+        <div class="score-pill-label">转化影响度</div>
+      </div>
+      <div class="score-pill-val empty" id="pill1">— / 4</div>
+    </div>
+    <div class="score-pill">
+      <div>
+        <div class="score-pill-label">日本用户敏感度</div>
+      </div>
+      <div class="score-pill-val empty" id="pill2">— / 3</div>
+    </div>
+    <div class="score-pill">
+      <div>
+        <div class="score-pill-label">影响范围</div>
+      </div>
+      <div class="score-pill-val empty" id="pill3">— / 3</div>
+    </div>
+  </div>
+
+  <!-- Dimension 1 -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-num">维度 01</div>
+        <div class="dim-title">转化影响度</div>
+      </div>
+      <div style="text-align:right">
+        <div class="dim-current empty" id="cur1">—</div>
+        <div class="dim-max">满分 4 分</div>
+      </div>
+    </div>
+    <div class="options-list">
+      <label class="opt-label" id="d1o4">
+        <input type="radio" name="d1" value="4" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">4</div>
+        <div class="opt-content">
+          <div class="opt-title">直接阻断转化</div>
+          <div class="opt-desc">用户因此无法或放弃点击跳转 OTA（如价格缺失、跳转链接失效）</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d1o3">
+        <input type="radio" name="d1" value="3" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">3</div>
+        <div class="opt-content">
+          <div class="opt-title">显著降低点击意愿</div>
+          <div class="opt-desc">用户对酒店信息失去信任，不愿意点击（如价格矛盾、关键信息缺失）</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d1o2">
+        <input type="radio" name="d1" value="2" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">2</div>
+        <div class="opt-content">
+          <div class="opt-title">增加决策摩擦</div>
+          <div class="opt-desc">用户需要额外验证或思考才能决策（如表达不清、信息结构混乱）</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d1o1">
+        <input type="radio" name="d1" value="1" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">1</div>
+        <div class="opt-content">
+          <div class="opt-title">体验不佳但不影响决策</div>
+          <div class="opt-desc">视觉或细节问题，用户仍能顺利完成转化</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Dimension 2 -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-num">维度 02</div>
+        <div class="dim-title">日本用户敏感度</div>
+      </div>
+      <div style="text-align:right">
+        <div class="dim-current empty" id="cur2">—</div>
+        <div class="dim-max">满分 3 分</div>
+      </div>
+    </div>
+    <div class="options-list">
+      <label class="opt-label" id="d2o3">
+        <input type="radio" name="d2" value="3" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">3</div>
+        <div class="opt-content">
+          <div class="opt-title">核心信任要素</div>
+          <div class="opt-desc">日本用户特别敏感（费用透明、规则明确、取消政策、服务细节）</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d2o2">
+        <input type="radio" name="d2" value="2" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">2</div>
+        <div class="opt-content">
+          <div class="opt-title">本地化体验</div>
+          <div class="opt-desc">日语表达、文化习惯、本地语境问题（如敬语、日期格式、地图习惯）</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d2o1">
+        <input type="radio" name="d2" value="1" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">1</div>
+        <div class="opt-content">
+          <div class="opt-title">通用体验问题</div>
+          <div class="opt-desc">与日本用户特性无明显关联，属于通用 UX 问题</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Dimension 3 -->
+  <div class="dim-card">
+    <div class="dim-header">
+      <div>
+        <div class="dim-num">维度 03</div>
+        <div class="dim-title">影响范围</div>
+      </div>
+      <div style="text-align:right">
+        <div class="dim-current empty" id="cur3">—</div>
+        <div class="dim-max">满分 3 分</div>
+      </div>
+    </div>
+    <div class="options-list">
+      <label class="opt-label" id="d3o3">
+        <input type="radio" name="d3" value="3" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">3</div>
+        <div class="opt-content">
+          <div class="opt-title">全量或主路径</div>
+          <div class="opt-desc">出现在搜索结果列表、酒店主页等核心曝光页面，影响所有用户</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d3o2">
+        <input type="radio" name="d3" value="2" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">2</div>
+        <div class="opt-content">
+          <div class="opt-title">部分场景</div>
+          <div class="opt-desc">出现在特定类型酒店、特定筛选条件或部分页面模块</div>
+        </div>
+      </label>
+      <label class="opt-label" id="d3o1">
+        <input type="radio" name="d3" value="1" onchange="update()">
+        <div class="opt-radio"><div class="opt-radio-dot"></div></div>
+        <div class="opt-score">1</div>
+        <div class="opt-content">
+          <div class="opt-title">边缘场景</div>
+          <div class="opt-desc">极少数用户路径或低频功能中出现，整体曝光量极低</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-wrap" id="result-wrap">
+    <div class="result-card" id="result-card">
+      <div class="result-top">
+        <div>
+          <div class="result-priority" id="result-priority"></div>
+          <div class="result-name" id="result-name"></div>
+        </div>
+        <div class="result-total" id="result-total"></div>
+      </div>
+      <div class="score-breakdown">
+        <div class="breakdown-item">
+          <div class="breakdown-label">转化影响度</div>
+          <div class="breakdown-val" id="b1"></div>
+        </div>
+        <div class="breakdown-item">
+          <div class="breakdown-label">日本用户敏感度</div>
+          <div class="breakdown-val" id="b2"></div>
+        </div>
+        <div class="breakdown-item">
+          <div class="breakdown-label">影响范围</div>
+          <div class="breakdown-val" id="b3"></div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%"></div></div>
+      <div class="result-tip" id="result-tip"></div>
+    </div>
+  </div>
+
+  <div class="reset-row">
+    <button class="reset-btn" onclick="resetAll()">重置评估</button>
+  </div>
+
+  <div class="footer">HOTEL UX · JP MARKET · PRIORITY FRAMEWORK v1.0</div>
+
+</div>
+
+<script>
+  const LEVELS = [
+    {
+      min: 9, cls: 'p0',
+      priority: 'PRIORITY LEVEL',
+      name: 'P0 — 立即修复',
+      tip: '<strong>建议：</strong>本问题阻断或严重损害转化路径，需在下一个迭代周期内优先处理。若涉及数据错误或功能异常，评估是否需要紧急热修（hotfix）。排期时优先于其他所有需求。'
+    },
+    {
+      min: 6, cls: 'p1',
+      priority: 'PRIORITY LEVEL',
+      name: 'P1 — 近期修复',
+      tip: '<strong>建议：</strong>本问题显著影响日本用户的决策效率或信任感，建议纳入当前季度排期，在 1–2 个版本内完成优化。可与设计评审一并排入迭代计划。'
+    },
+    {
+      min: 0, cls: 'p2',
+      priority: 'PRIORITY LEVEL',
+      name: 'P2 — 规划改进',
+      tip: '<strong>建议：</strong>体验细节或边缘场景问题，可纳入迭代 backlog，结合设计资源统一规划。不影响核心转化，可在资源允许时批量处理。'
+    }
+  ];
+
+  function update() {
+    const v1 = getVal('d1'), v2 = getVal('d2'), v3 = getVal('d3');
+
+    updatePill('pill1', v1, 4);
+    updatePill('pill2', v2, 3);
+    updatePill('pill3', v3, 3);
+    updateCur('cur1', v1);
+    updateCur('cur2', v2);
+    updateCur('cur3', v3);
+    updateSelected();
+
+    if (v1 !== null && v2 !== null && v3 !== null) {
+      showResult(v1, v2, v3);
+    }
+  }
+
+  function getVal(name) {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? parseInt(el.value) : null;
+  }
+
+  function updatePill(id, val, max) {
+    const el = document.getElementById(id);
+    if (val !== null) {
+      el.textContent = val + ' / ' + max;
+      el.classList.remove('empty');
+    } else {
+      el.textContent = '— / ' + max;
+      el.classList.add('empty');
+    }
+  }
+
+  function updateCur(id, val) {
+    const el = document.getElementById(id);
+    if (val !== null) {
+      el.textContent = val;
+      el.classList.remove('empty');
+    } else {
+      el.textContent = '—';
+      el.classList.add('empty');
+    }
+  }
+
+  function updateSelected() {
+    document.querySelectorAll('.opt-label').forEach(label => {
+      label.classList.toggle('selected', label.querySelector('input').checked);
+    });
+  }
+
+  function showResult(v1, v2, v3) {
+    const total = v1 + v2 + v3;
+    const level = LEVELS.find(l => total >= l.min);
+
+    const card = document.getElementById('result-card');
+    card.className = 'result-card ' + level.cls;
+    document.getElementById('result-priority').textContent = level.priority;
+    document.getElementById('result-name').textContent = level.name;
+    document.getElementById('result-total').innerHTML = total + '<span class="result-total-max"> / 10</span>';
+    document.getElementById('b1').textContent = v1 + ' / 4';
+    document.getElementById('b2').textContent = v2 + ' / 3';
+    document.getElementById('b3').textContent = v3 + ' / 3';
+    document.getElementById('bar-fill').style.width = (total / 10 * 100) + '%';
+    document.getElementById('result-tip').innerHTML = level.tip;
+
+    const wrap = document.getElementById('result-wrap');
+    wrap.classList.add('visible');
+  }
+
+  function resetAll() {
+    document.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+    updateSelected();
+    ['pill1','pill2','pill3'].forEach((id, i) => updatePill(id, null, [4,3,3][i]));
+    ['cur1','cur2','cur3'].forEach(id => updateCur(id, null));
+    document.getElementById('result-wrap').classList.remove('visible');
+  }
+</script>
+</body>
+</html>
